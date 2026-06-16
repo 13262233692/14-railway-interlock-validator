@@ -12,6 +12,7 @@
 #include "boolean/BooleanEvaluator.h"
 #include "route/RouteFinder.h"
 #include "route/ConflictDetector.h"
+#include "route/SideProtection.h"
 
 using namespace railway;
 
@@ -26,6 +27,7 @@ void printUsage() {
     std::cout << "  route <拓扑文件> <起点> <终点>  搜索有效进路" << std::endl;
     std::cout << "  conflict <拓扑文件> <起点> <终点>  检测进路冲突" << std::endl;
     std::cout << "  validate <拓扑文件> <表达式>  验证联锁条件安全性" << std::endl;
+    std::cout << "  protect <拓扑文件> <起点> <终点>  生成侧面防护道岔表" << std::endl;
     std::cout << std::endl;
     std::cout << "选项:" << std::endl;
     std::cout << "  -h, --help                显示帮助信息" << std::endl;
@@ -443,6 +445,126 @@ int cmdValidate(const std::string& topologyFile, const std::string& condition, b
     return initialResult ? 0 : 2;
 }
 
+int cmdProtect(const std::string& topologyFile, const std::string& startSignal,
+               const std::string& endSignal, size_t maxRoutes, bool verbose) {
+    TopologyParser parser;
+    auto graph = parser.parseFile(topologyFile);
+    if (!graph) {
+        std::cerr << "错误: 无法解析拓扑文件 - " << parser.getLastError() << std::endl;
+        return 1;
+    }
+
+    auto state = std::make_shared<StationState>(graph);
+    RouteFinder finder(graph);
+    finder.setState(state);
+
+    auto routes = finder.findAllRoutes(startSignal, endSignal, maxRoutes);
+
+    if (routes.empty()) {
+        std::cerr << "错误: 未找到有效进路" << std::endl;
+        return 1;
+    }
+
+    SideProtectionCalculator calculator(graph);
+    calculator.setState(state);
+
+    std::cout << "进路侧面防护分析报告" << std::endl;
+    std::cout << "════════════════════════════════════════════════════════════" << std::endl;
+    std::cout << std::endl;
+    std::cout << "  起点信号机: " << startSignal << std::endl;
+    std::cout << "  终点信号机: " << endSignal << std::endl;
+    std::cout << "  可用进路数量: " << routes.size() << " 条" << std::endl;
+    std::cout << std::endl;
+
+    for (size_t idx = 0; idx < routes.size(); idx++) {
+        const auto& route = routes[idx];
+
+        printSectionHeader("进路 #" + std::to_string(idx + 1) + " 防护分析");
+
+        std::cout << "  进路路径: ";
+        for (size_t i = 0; i < route.nodeIds.size(); i++) {
+            if (i > 0) std::cout << " → ";
+            std::cout << route.nodeIds[i];
+        }
+        std::cout << std::endl;
+        std::cout << "  总权重: " << route.totalWeight << std::endl;
+        std::cout << std::endl;
+
+        auto report = calculator.calculateProtection(route);
+
+        if (report.protectionSwitches.empty()) {
+            std::cout << "  ✅ 无需额外侧面防护" << std::endl;
+            std::cout << "  该进路所有相邻侧线均无法直接导向主进路。" << std::endl;
+        } else {
+            std::cout << "  ⚠️  需防护道岔数量: " << report.protectionSwitches.size() << " 个" << std::endl;
+            std::cout << std::endl;
+
+            for (size_t i = 0; i < report.protectionSwitches.size(); i++) {
+                const auto& ps = report.protectionSwitches[i];
+                std::cout << "  [" << (i + 1) << "] " << ps.description << std::endl;
+                std::cout << "      风险等级: " << std::fixed << std::setprecision(1) << ps.riskLevel << "%" << std::endl;
+                if (!ps.dangerSourceTracks.empty()) {
+                    std::cout << "      危险源区段: ";
+                    for (size_t j = 0; j < ps.dangerSourceTracks.size(); j++) {
+                        if (j > 0) std::cout << ", ";
+                        std::cout << ps.dangerSourceTracks[j];
+                    }
+                    std::cout << std::endl;
+                }
+                if (!ps.alternativePaths.empty()) {
+                    std::cout << "      危险路径示例: " << ps.alternativePaths << std::endl;
+                }
+                std::cout << std::endl;
+            }
+
+            printSectionHeader("防护联锁表达式");
+            std::cout << "  " << report.booleanExpression << std::endl;
+            std::cout << std::endl;
+
+            std::cout << "  解释: 主进路开通前，上述所有防护道岔必须被强制锁闭" << std::endl;
+            std::cout << "        在指定位置，以偏转侧线来车方向，防止侧面冲突。" << std::endl;
+
+            if (verbose) {
+                boolean::BooleanParser booleanParser;
+                auto fullExpr = booleanParser.parse(report.booleanExpression);
+                boolean::BooleanEvaluator evaluator;
+                evaluator.bindStationState(state);
+                bool protectedNow = evaluator.evaluate(fullExpr);
+
+                printSectionHeader("当前状态验证");
+                std::cout << "  当前防护条件是否满足: " << (protectedNow ? "✅ 满足" : "❌ 不满足") << std::endl;
+
+                if (!protectedNow) {
+                    std::cout << std::endl;
+                    std::cout << "  不满足的防护条件:" << std::endl;
+                    for (const auto& ps : report.protectionSwitches) {
+                        std::string var;
+                        if (ps.requiredPosition == ProtectionType::LOCK_NORMAL) {
+                            var = "switch." + ps.switchId + ".normal";
+                        } else if (ps.requiredPosition == ProtectionType::LOCK_REVERSE) {
+                            var = "switch." + ps.switchId + ".reverse";
+                        } else {
+                            continue;
+                        }
+                        bool val = state->getBooleanValue(var);
+                        if (!val) {
+                            std::cout << "    - " << var << " 当前为 false" << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+
+        std::cout << std::endl;
+        if (idx < routes.size() - 1) {
+            std::cout << "─────────────────────────────────────────────────────" << std::endl;
+        }
+    }
+
+    std::cout << std::endl;
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
     std::vector<std::string> args;
     for (int i = 1; i < argc; i++) {
@@ -518,6 +640,14 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         return cmdValidate(filteredArgs[1], filteredArgs[2], verbose);
+    }
+
+    if (command == "protect") {
+        if (filteredArgs.size() < 4) {
+            std::cerr << "错误: protect 命令需要拓扑文件、起点信号机、终点信号机" << std::endl;
+            return 1;
+        }
+        return cmdProtect(filteredArgs[1], filteredArgs[2], filteredArgs[3], maxRoutes, verbose);
     }
 
     std::cerr << "错误: 未知命令 - " << command << std::endl;
