@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<station name="复杂编组站_含灯泡线与三角线" code="YD01">
+
+  <trackCircuits>
+    <!-- 主干线 -->
+    <circuit id="T1" name="一接近" length="200" occupied="false"/>
+    <circuit id="T2" name="II道" length="500" occupied="false"/>
+    <circuit id="T3" name="I道" length="500" occupied="false"/>
+    <circuit id="T4" name="三接近" length="200" occupied="false"/>
+
+    <!-- 灯泡线 (Turnaround Loop) -->
+    <circuit id="L1" name="灯泡线入口" length="50" occupied="false"/>
+    <circuit id="L2" name="灯泡线圆弧A" length="100" occupied="false"/>
+    <circuit id="L3" name="灯泡线圆弧B" length="100" occupied="false"/>
+    <circuit id="L4" name="灯泡线圆弧C" length="100" occupied="false"/>
+    <circuit id="L5" name="灯泡线出口" length="50" occupied="false"/>
+
+    <!-- 三角线 (Wye / Triangle) -->
+    <circuit id="W_A" name="三角线A边" length="80" occupied="false"/>
+    <circuit id="W_B" name="三角线B边" length="80" occupied="false"/>
+    <circuit id="W_C" name="三角线C边" length="80" occupied="false"/>
+
+    <!-- 其他区段 -->
+    <circuit id="T5" name="调车场入口" length="100" occupied="false"/>
+    <circuit id="T6" name="联络线" length="150" occupied="false"/>
+  </trackCircuits>
+
+  <switches>
+    <!-- 普通单开道岔 -->
+    <switch id="W1" name="1号道岔" position="normal" locked="false"
+            from="T1" normalTo="T3" reverseTo="T2"/>
+    <switch id="W2" name="2号道岔" position="normal" locked="false"
+            from="T3" normalTo="T4" reverseTo="L1"/>
+    <switch id="W3" name="3号道岔" position="normal" locked="false"
+            from="L5" normalTo="T2" reverseTo="W_A"/>
+
+    <!-- 复式交分道岔 (Double Slip Switch) -->
+    <switch id="W4" name="4号交分道岔" position="normal" locked="false"
+            from="T2" normalTo="W_B" reverseTo="T6"
+            isSlip="double"/>
+
+    <!-- 菱形交叉 (Diamond Crossing) -->
+    <switch id="W5" name="5号菱形交叉" position="normal" locked="false"
+            isDiamond="true"/>
+  </switches>
+
+  <signals>
+    <signal id="S1" name="上行进站" type="entry" aspect="stop" protects="T1"/>
+    <signal id="S2" name="下行进站" type="entry" aspect="stop" protects="T4"/>
+    <signal id="X1" name="I道出站" type="exit" aspect="stop" protects="T3"/>
+    <signal id="X2" name="II道出站" type="exit" aspect="stop" protects="T2"/>
+    <signal id="XL" name="灯泡线入口信号" type="shunting" aspect="stop" protects="L1"/>
+  </signals>
+
+  <connections>
+    <!-- 信号机连接 -->
+    <connection from="S1" to="T1" weight="1"/>
+    <connection from="T1" to="S1" weight="1"/>
+    <connection from="S2" to="T4" weight="1"/>
+    <connection from="T4" to="S2" weight="1"/>
+    <connection from="X1" to="T3" weight="1"/>
+    <connection from="T3" to="X1" weight="1"/>
+    <connection from="X2" to="T2" weight="1"/>
+    <connection from="T2" to="X2" weight="1"/>
+    <connection from="XL" to="L1" weight="1"/>
+    <connection from="L1" to="XL" weight="1"/>
+
+    <!-- 1号道岔: T1 <-> W1 <-> {T3, T2} -->
+    <connection from="T1" to="W1" weight="1"/>
+    <connection from="W1" to="T1" weight="1"/>
+    <connection from="W1" to="T3" weight="1"/>
+    <connection from="T3" to="W1" weight="1"/>
+    <connection from="W1" to="T2" weight="2"/>
+    <connection from="T2" to="W1" weight="2"/>
+
+    <!-- 2号道岔: T3 <-> W2 <-> {T4, L1} -->
+    <connection from="T3" to="W2" weight="1"/>
+    <connection from="W2" to="T3" weight="1"/>
+    <connection from="W2" to="T4" weight="1"/>
+    <connection from="T4" to="W2" weight="1"/>
+    <connection from="W2" to="L1" weight="2"/>
+    <connection from="L1" to="W2" weight="2"/>
+
+    <!-- 灯泡线完整回路: L1 -> L2 -> L3 -> L4 -> L5 -->
+    <connection from="L1" to="L2" weight="1"/>
+    <connection from="L2" to="L1" weight="1"/>
+    <connection from="L2" to="L3" weight="1"/>
+    <connection from="L3" to="L2" weight="1"/>
+    <connection from="L3" to="L4" weight="1"/>
+    <connection from="L4" to="L3" weight="1"/>
+    <connection from="L4" to="L5" weight="1"/>
+    <connection from="L5" to="L4" weight="1"/>
+
+    <!-- 3号道岔: L5 <-> W3 <-> {T2, W_A} -->
+    <connection from="L5" to="W3" weight="1"/>
+    <connection from="W3" to="L5" weight="1"/>
+    <connection from="W3" to="T2" weight="1"/>
+    <connection from="T2" to="W3" weight="1"/>
+    <connection from="W3" to="W_A" weight="2"/>
+    <connection from="W_A" to="W3" weight="2"/>
+
+    <!-- 三角线闭合回路: W_A <-> W_B <-> W_C <-> W_A -->
+    <connection from="W_A" to="W_B" weight="1"/>
+    <connection from="W_B" to="W_A" weight="1"/>
+    <connection from="W_B" to="W_C" weight="1"/>
+    <connection from="W_C" to="W_B" weight="1"/>
+    <connection from="W_C" to="W_A" weight="1"/>
+    <connection from="W_A" to="W_C" weight="1"/>
+
+    <!-- 4号复式交分道岔: T2 <-> W4 <-> {W_B, T6, ...} -->
+    <connection from="T2" to="W4" weight="1"/>
+    <connection from="W4" to="T2" weight="1"/>
+    <connection from="W4" to="W_B" weight="1"/>
+    <connection from="W_B" to="W4" weight="1"/>
+    <connection from="W4" to="T6" weight="2"/>
+    <connection from="T6" to="W4" weight="2"/>
+    <connection from="W4" to="T5" weight="2"/>
+    <connection from="T5" to="W4" weight="2"/>
+
+    <!-- 菱形交叉 W5 -->
+    <connection from="T6" to="W5" weight="1"/>
+    <connection from="W5" to="T6" weight="1"/>
+    <connection from="W5" to="T5" weight="1"/>
+    <connection from="T5" to="W5" weight="1"/>
+
+    <!-- T5 连接到 T6 -->
+    <connection from="T5" to="T6" weight="2"/>
+    <connection from="T6" to="T5" weight="2"/>
+  </connections>
+
+</station>
