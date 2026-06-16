@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<station name="示例车站" code="ST01">
+
+  <!-- 轨道区段 -->
+  <trackCircuits>
+    <circuit id="T1" name="一接近区段" length="200" occupied="false"/>
+    <circuit id="T2" name="一道岔区段" length="50" occupied="false"/>
+    <circuit id="T3" name="二道岔区段" length="50" occupied="false"/>
+    <circuit id="T4" name="一股道" length="800" occupied="false"/>
+    <circuit id="T5" name="三股道" length="800" occupied="false"/>
+    <circuit id="T6" name="渡线区段" length="30" occupied="false"/>
+    <circuit id="T7" name="四岔区段" length="50" occupied="false"/>
+    <circuit id="T8" name="二接近区段" length="200" occupied="false"/>
+    <circuit id="T9" name="二股道" length="800" occupied="false"/>
+    <circuit id="T10" name="五岔区段" length="50" occupied="false"/>
+  </trackCircuits>
+
+  <!-- 道岔 -->
+  <switches>
+    <switch id="W1" name="1号道岔" position="normal" locked="false"
+            from="T1" normalTo="T2" reverseTo="T9"/>
+    <switch id="W2" name="2号道岔" position="normal" locked="false"
+            from="T2" normalTo="T4" reverseTo="T6"/>
+    <switch id="W3" name="3号道岔" position="normal" locked="false"
+            from="T9" normalTo="T10" reverseTo="T7"/>
+    <switch id="W4" name="4号道岔" position="normal" locked="false"
+            from="T7" normalTo="T5" reverseTo="T6"/>
+    <switch id="W5" name="5号道岔" position="normal" locked="false"
+            from="T10" normalTo="T8" reverseTo="T7"/>
+  </switches>
+
+  <!-- 信号机 -->
+  <signals>
+    <signal id="S1" name="上行进站信号机" type="entry" aspect="stop" protects="T1"/>
+    <signal id="S2" name="下行进站信号机" type="entry" aspect="stop" protects="T8"/>
+    <signal id="X1" name="I道上行出站信号机" type="exit" aspect="stop" protects="T4"/>
+    <signal id="X2" name="II道上行出站信号机" type="exit" aspect="stop" protects="T9"/>
+    <signal id="X3" name="III道上行出站信号机" type="exit" aspect="stop" protects="T5"/>
+    <signal id="X4" name="I道下行出站信号机" type="exit" aspect="stop" protects="T4"/>
+    <signal id="X5" name="II道下行出站信号机" type="exit" aspect="stop" protects="T9"/>
+    <signal id="X6" name="III道下行出站信号机" type="exit" aspect="stop" protects="T5"/>
+  </signals>
+
+  <!-- 连接关系 -->
+  <connections>
+    <!-- 信号机与区段的连接 -->
+    <connection from="S1" to="T1" weight="1"/>
+    <connection from="T1" to="S1" weight="1"/>
+
+    <connection from="S2" to="T8" weight="1"/>
+    <connection from="T8" to="S2" weight="1"/>
+
+    <connection from="X1" to="T4" weight="1"/>
+    <connection from="T4" to="X1" weight="1"/>
+
+    <connection from="X2" to="T9" weight="1"/>
+    <connection from="T9" to="X2" weight="1"/>
+
+    <connection from="X3" to="T5" weight="1"/>
+    <connection from="T5" to="X3" weight="1"/>
+
+    <connection from="X4" to="T4" weight="1"/>
+    <connection from="T4" to="X4" weight="1"/>
+
+    <connection from="X5" to="T9" weight="1"/>
+    <connection from="T9" to="X5" weight="1"/>
+
+    <connection from="X6" to="T5" weight="1"/>
+    <connection from="T5" to="X6" weight="1"/>
+
+    <!-- 区段与道岔的连接 -->
+    <connection from="T1" to="W1" weight="1"/>
+    <connection from="W1" to="T1" weight="1"/>
+
+    <connection from="W1" to="T2" weight="1"/>
+    <connection from="T2" to="W1" weight="1"/>
+
+    <connection from="W1" to="T9" weight="2"/>
+    <connection from="T9" to="W1" weight="2"/>
+
+    <connection from="T2" to="W2" weight="1"/>
+    <connection from="W2" to="T2" weight="1"/>
+
+    <connection from="W2" to="T4" weight="1"/>
+    <connection from="T4" to="W2" weight="1"/>
+
+    <connection from="W2" to="T6" weight="2"/>
+    <connection from="T6" to="W2" weight="2"/>
+
+    <connection from="T9" to="W3" weight="1"/>
+    <connection from="W3" to="T9" weight="1"/>
+
+    <connection from="W3" to="T10" weight="1"/>
+    <connection from="T10" to="W3" weight="1"/>
+
+    <connection from="W3" to="T7" weight="2"/>
+    <connection from="T7" to="W3" weight="2"/>
+
+    <connection from="T7" to="W4" weight="1"/>
+    <connection from="W4" to="T7" weight="1"/>
+
+    <connection from="W4" to="T5" weight="1"/>
+    <connection from="T5" to="W4" weight="1"/>
+
+    <connection from="W4" to="T6" weight="2"/>
+    <connection from="T6" to="W4" weight="2"/>
+
+    <connection from="T10" to="W5" weight="1"/>
+    <connection from="W5" to="T10" weight="1"/>
+
+    <connection from="W5" to="T8" weight="1"/>
+    <connection from="T8" to="W5" weight="1"/>
+
+    <connection from="W5" to="T7" weight="2"/>
+    <connection from="T7" to="W5" weight="2"/>
+  </connections>
+
+</station>
